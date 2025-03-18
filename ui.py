@@ -219,13 +219,13 @@ class FaultDetectionApp:
         title_frame.pack(fill="x", padx=20, pady=(20,30))
         
         title = ctk.CTkLabel(title_frame, text="⚙️ System Setpoint Configuration",
-                           font=("Roboto", 28, "bold"),
+                           font=("Orbitron", 28, "bold"),
                            text_color="#00FF00")
         title.pack(pady=20)
         
         subtitle = ctk.CTkLabel(title_frame, 
                               text="Configure operational parameters for all devices",
-                              font=("Roboto", 14),
+                              font=("Exo 2", 14),
                               text_color="#AAAAAA")
         subtitle.pack(pady=(0,10))
         
@@ -234,121 +234,118 @@ class FaultDetectionApp:
         
         # Create sections for each machine
         for machine in ["Air Handling Unit", "Chiller", "Generator"]:
-            # Machine container with shadow effect
             machine_container = ctk.CTkFrame(settings, fg_color="#2B2B2B")
             machine_container.pack(fill="x", padx=30, pady=15)
             
-            # Header frame with icon
             header_frame = ctk.CTkFrame(machine_container, fg_color="#1E1E1E")
             header_frame.pack(fill="x", padx=2, pady=2)
             
-            # Machine icon mapping
             icons = {
                 "Air Handling Unit": "🌀",
                 "Chiller": "❄️",
                 "Generator": "⚡"
             }
             
-            # Machine title with icon
             machine_title = ctk.CTkLabel(header_frame, 
                                        text=f"{icons[machine]} {machine}",
-                                       font=("Roboto", 22, "bold"),
+                                       font=("Orbitron", 22, "bold"),
                                        text_color="#00FF00")
             machine_title.pack(pady=15)
             
-            # Initialize temporary setpoints for this machine
             self.temp_setpoints[machine] = {}
             
-            # Parameters table
+            # Enhanced parameter grid
             param_frame = ctk.CTkFrame(machine_container, fg_color="#232323")
             param_frame.pack(fill="x", padx=15, pady=15)
             
-            # Table headers
-            headers = ["Parameter", "Min", "Current", "Max", "New Value"]
-            header_colors = ["#00FF00", "#FFA500", "#00FFFF", "#FFA500", "#00FF00"]
+            # Create header row with industrial style
+            headers = [
+                ("Parameter", "w", "#00FF00", "Orbitron"),
+                ("Current Value", "nsew", "#00FFFF", "DSEG14 Classic"),
+                ("Setpoint Range", "nsew", "#FFA500", "Exo 2"),
+                ("New Setpoint", "nsew", "#00FF00", "Orbitron")
+            ]
             
-            for col, (header, color) in enumerate(zip(headers, header_colors)):
-                label = ctk.CTkLabel(param_frame, 
-                                   text=header,
-                                   font=("Roboto", 14, "bold"),
-                                   text_color=color)
-                label.grid(row=0, column=col, padx=15, pady=(10,5), sticky="w")
+            for col, (text, align, color, font) in enumerate(headers):
+                header = ctk.CTkLabel(param_frame,
+                                    text=text,
+                                    font=(font, 14, "bold"),
+                                    text_color=color)
+                header.grid(row=0, column=col, padx=15, pady=(10,5), sticky=align)
             
-            # Add parameters
+            # Add parameters with enhanced styling
             if machine in self.setpoint_ranges:
                 for idx, (param, (min_val, max_val)) in enumerate(self.setpoint_ranges[machine].items(), 1):
-                    # Parameter name with custom style
+                    # Parameter name
                     param_name = ctk.CTkLabel(param_frame,
                                             text=param.replace('_', ' ').title(),
-                                            font=("Roboto", 14),
+                                            font=("Exo 2", 12, "bold"),
                                             text_color="#FFFFFF")
                     param_name.grid(row=idx, column=0, padx=15, pady=10, sticky="w")
                     
-                    # Min value
-                    min_label = ctk.CTkLabel(param_frame,
-                                           text=f"{min_val:.1f}",
-                                           font=("Roboto", 12),
-                                           text_color="#FFA500")
-                    min_label.grid(row=idx, column=1, padx=15, pady=10)
+                    # Current value with digital display style
+                    current_frame = ctk.CTkFrame(param_frame, fg_color="#1A1A1A")
+                    current_frame.grid(row=idx, column=1, padx=15, pady=10, sticky="ew")
                     
-                    # Current value with highlight
-                    current_frame = ctk.CTkFrame(param_frame, fg_color="#1E1E1E")
-                    current_frame.grid(row=idx, column=2, padx=15, pady=10)
-                    
+                    current_value = self.setpoints[machine][param]
                     current_label = ctk.CTkLabel(current_frame,
-                                               text=f"{self.setpoints[machine][param]:.1f}",
-                                               font=("Roboto", 12),
+                                               text=f"{current_value:.2f}",
+                                               font=("DSEG14 Classic", 16),
                                                text_color="#00FFFF")
                     current_label.pack(padx=10, pady=5)
                     
-                    # Max value
-                    max_label = ctk.CTkLabel(param_frame,
-                                           text=f"{max_val:.1f}",
-                                           font=("Roboto", 12),
-                                           text_color="#FFA500")
-                    max_label.grid(row=idx, column=3, padx=15, pady=10)
+                    # Range display with industrial style
+                    range_frame = ctk.CTkFrame(param_frame, fg_color="#1A1A1A")
+                    range_frame.grid(row=idx, column=2, padx=15, pady=10, sticky="ew")
                     
-                    # Entry for new value with custom style
-                    entry_frame = ctk.CTkFrame(param_frame, fg_color="#1E1E1E")
-                    entry_frame.grid(row=idx, column=4, padx=15, pady=10)
+                    range_text = f"[{min_val:.1f} - {max_val:.1f}]"
+                    range_label = ctk.CTkLabel(range_frame,
+                                             text=range_text,
+                                             font=("Share Tech Mono", 12),
+                                             text_color="#FFA500")
+                    range_label.pack(padx=10, pady=5)
+                    
+                    # New setpoint entry with industrial style
+                    entry_frame = ctk.CTkFrame(param_frame, fg_color="#1A1A1A")
+                    entry_frame.grid(row=idx, column=3, padx=15, pady=10, sticky="ew")
                     
                     entry = ctk.CTkEntry(entry_frame,
                                        width=100,
-                                       font=("Roboto", 12),
+                                       font=("Share Tech Mono", 14),
                                        fg_color="#2B2B2B",
                                        border_color="#00FF00",
-                                       text_color="#FFFFFF")
-                    entry.insert(0, f"{self.setpoints[machine][param]:.1f}")
+                                       border_width=2,
+                                       text_color="#00FF00")
+                    entry.insert(0, f"{current_value:.2f}")
                     entry.pack(padx=10, pady=5)
                     
-                    # Store reference to entry widget
                     self.temp_setpoints[machine][param] = {
                         'entry': entry,
                         'min': min_val,
                         'max': max_val
                     }
             
-            # Control buttons frame
+            # Control buttons with enhanced styling
             button_frame = ctk.CTkFrame(machine_container, fg_color="#2B2B2B")
             button_frame.pack(fill="x", padx=15, pady=(5,15))
             
-            # Reset button
             reset_btn = ctk.CTkButton(button_frame,
-                                    text="↺ Reset",
-                                    font=("Roboto", 12),
+                                    text="↺ Reset Values",
+                                    font=("Exo 2", 12),
                                     fg_color="#555555",
                                     hover_color="#444444",
-                                    width=100,
+                                    width=120,
+                                    corner_radius=6,
                                     command=lambda m=machine: self.reset_setpoints(m))
             reset_btn.pack(side="left", padx=15)
             
-            # Save button with icon
             save_btn = ctk.CTkButton(button_frame,
                                     text="💾 Save Changes",
-                                    font=("Roboto", 12, "bold"),
+                                    font=("Orbitron", 12, "bold"),
                                     fg_color="#008000",
                                     hover_color="#006400",
                                     width=150,
+                                    corner_radius=6,
                                     command=lambda m=machine: self.save_setpoints(m))
             save_btn.pack(side="right", padx=15)
         
@@ -428,22 +425,97 @@ class FaultDetectionApp:
                 text_color="#FF0000"
             )
         
-        # Update parameter values with comparison to setpoints
-        params_text = ""
+        # Create a styled parameter display
+        params_frame = ctk.CTkFrame(frame["params"].master, fg_color="#1A1A1A")
+        params_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        # Clear previous widgets
+        for widget in params_frame.winfo_children():
+                widget.destroy()
+        
+        # Header
+        header_frame = ctk.CTkFrame(params_frame, fg_color="#232323")
+        header_frame.pack(fill="x", padx=5, pady=5)
+        
+        # Create headers
+        ctk.CTkLabel(header_frame, text="Parameter",
+                    font=("Orbitron", 12, "bold"),
+                    text_color="#00FF00").pack(side="left", padx=10)
+        ctk.CTkLabel(header_frame, text="Current",
+                    font=("DSEG14 Classic", 12, "bold"),
+                    text_color="#00FFFF").pack(side="left", padx=10, expand=True)
+        ctk.CTkLabel(header_frame, text="Setpoint",
+                    font=("Share Tech Mono", 12, "bold"),
+                    text_color="#FFA500").pack(side="right", padx=10)
+        
+        # Parameter values with improved styling
         for k, v in data.items():
             if k in self.setpoints.get(machine, {}):
-                setpoint = self.setpoints[machine][k]
+                # Create parameter container
+                param_container = ctk.CTkFrame(params_frame, fg_color="#2B2B2B")
+                param_container.pack(fill="x", padx=5, pady=2)
+                
+                # Parameter name
+                param_name = ctk.CTkLabel(param_container,
+                                        text=k.replace('_', ' ').title(),
+                                        font=("Exo 2", 11),
+                                        text_color="#FFFFFF")
+                param_name.pack(side="left", padx=10)
+                
+                # Current value with digital display style
                 current = float(v)
+                setpoint = self.setpoints[machine][k]
                 deviation = abs(current - setpoint)
-                color = "#00FF00" if deviation < (setpoint * 0.1) else "#FFA500"
-                params_text += f"{k.replace('_', ' ').title()}:\n"
-                params_text += f"Current: {current:.2f} | Setpoint: {setpoint:.2f}\n"
+                
+                # Color coding based on deviation
+                if deviation < (setpoint * 0.05):  # Within 5%
+                    value_color = "#00FF00"  # Green
+                elif deviation < (setpoint * 0.1):  # Within 10%
+                    value_color = "#FFA500"  # Orange
+                else:
+                    value_color = "#FF0000"  # Red
+                
+                current_value = ctk.CTkLabel(param_container,
+                                           text=f"{current:.2f}",
+                                           font=("DSEG14 Classic", 14),
+                                           text_color=value_color)
+                current_value.pack(side="left", padx=10, expand=True)
+                
+                # Setpoint value
+                setpoint_value = ctk.CTkLabel(param_container,
+                                            text=f"{setpoint:.2f}",
+                                            font=("Share Tech Mono", 12),
+                                            text_color="#FFA500")
+                setpoint_value.pack(side="right", padx=10)
+                
+                # Add trend indicator
+                trend_indicator = "↑" if current > setpoint else "↓" if current < setpoint else "="
+                trend_color = "#FF0000" if trend_indicator != "=" else "#00FF00"
+                
+                trend_label = ctk.CTkLabel(param_container,
+                                         text=trend_indicator,
+                                         font=("Arial", 14, "bold"),
+                                         text_color=trend_color)
+                trend_label.pack(side="right", padx=2)
+                
             else:
-                params_text += f"{k.replace('_', ' ').title()}: {v:.2f}\n"
+                # Display other parameters without setpoint comparison
+                param_container = ctk.CTkFrame(params_frame, fg_color="#2B2B2B")
+                param_container.pack(fill="x", padx=5, pady=2)
+                
+                param_name = ctk.CTkLabel(param_container,
+                                        text=k.replace('_', ' ').title(),
+                                        font=("Exo 2", 11),
+                                        text_color="#888888")
+                param_name.pack(side="left", padx=10)
+                
+                value = ctk.CTkLabel(param_container,
+                                   text=f"{float(v):.2f}",
+                                   font=("DSEG14 Classic", 14),
+                                   text_color="#888888")
+                value.pack(side="right", padx=10)
         
-        frame["params"].configure(text=params_text)
-        
-        # Update trends using trend analyzer with parameter data
+        # Update trends
         self.trend_analyzer.update_trends(machine, prediction, data=data)
 
     def continuous_monitoring(self):
