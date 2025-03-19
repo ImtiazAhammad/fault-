@@ -77,12 +77,12 @@ class TrendAnalyzer:
                                   text_color="#00FF00")
         trend_title.pack(pady=5)
         
-        # Create matplotlib figure with subplots
+        # Create matplotlib figure with subplots (only for parameters)
         fig = Figure(figsize=(6, 6), facecolor='#1B1B1B')
         
-        # Create subplots for parameters and fault status
-        gs = fig.add_gridspec(4, 1, height_ratios=[1, 1, 1, 0.5])
-        axes = [fig.add_subplot(gs[i]) for i in range(4)]
+        # Create subplots for parameters only (removed fault status)
+        gs = fig.add_gridspec(3, 1)  # Changed from 4 to 3 subplots
+        axes = [fig.add_subplot(gs[i]) for i in range(3)]
         
         # Customize appearance for all subplots
         for ax in axes:
@@ -101,27 +101,13 @@ class TrendAnalyzer:
         for param in self.tracked_parameters[machine]:
             self.trend_data[machine]["parameter_history"][param] = deque(maxlen=100)
         
-        # Create statistics frame
-        stats_frame = ctk.CTkFrame(trend_frame, fg_color="#2B2B2B")
-        stats_frame.pack(fill="x", padx=5, pady=5)
-        
-        stats_title = ctk.CTkLabel(stats_frame, text="Fault Statistics",
-                                  font=("Roboto", 14, "bold"),
-                                  text_color="#00FF00")
-        stats_title.pack(pady=2)
-        
-        stats_label = ctk.CTkLabel(stats_frame, text="",
-                                  font=("Roboto", 12))
-        stats_label.pack(pady=2)
-        
         # Store references
         if machine not in self.machine_frames:
             self.machine_frames[machine] = {}
             
         self.machine_frames[machine].update({
             "trend_canvas": canvas,
-            "trend_axes": axes,
-            "stats_label": stats_label
+            "trend_axes": axes
         })
         
         return trend_frame
@@ -153,7 +139,7 @@ class TrendAnalyzer:
         timestamps = list(self.trend_data[machine]["timestamps"])
         
         if timestamps:
-            # Plot parameter trends in first three subplots
+            # Plot parameter trends
             for idx, param in enumerate(self.tracked_parameters[machine]):
                 if param in self.trend_data[machine]["parameter_history"]:
                     values = list(self.trend_data[machine]["parameter_history"][param])
@@ -162,16 +148,6 @@ class TrendAnalyzer:
                         axes[idx].plot(timestamps, values, '-', color='#00FF00', linewidth=2)
                         axes[idx].set_title(param.replace('_', ' ').title(), color='white', pad=5)
                         axes[idx].grid(True, linestyle='--', alpha=0.3)
-            
-            # Plot fault status in bottom subplot
-            faults = list(self.trend_data[machine]["faults"])
-            fault_colors = ['green' if f == 0 else 'red' for f in faults]
-            axes[-1].plot(timestamps, faults, '-', color='#FF5555', linewidth=2)
-            axes[-1].set_ylim(-0.5, 4.5)
-            axes[-1].set_yticks(range(5))
-            axes[-1].set_yticklabels([self.fault_types[machine][i] for i in range(5)], 
-                                    fontsize=8)
-            axes[-1].set_title('Fault Status', color='white', pad=5)
         
         # Format x-axis
         for ax in axes:
@@ -185,20 +161,57 @@ class TrendAnalyzer:
         fig.tight_layout()
         canvas.draw()
         
-        # Update statistics
-        self.update_statistics(machine)
+        # Update statistics with prediction
+        self.update_statistics(machine, prediction)
 
-    def update_statistics(self, machine):
-        """Update statistics display for a machine"""
-        total_samples = sum(self.trend_data[machine]["fault_counts"].values())
-        stats_text = "Fault Distribution:\n"
+    def update_statistics(self, machine, prediction):
+        """Update both histogram and trend graphs"""
+        # Update histogram
+        if hasattr(self, 'histograms') and machine in self.histograms:
+            ax = self.histograms[machine]['ax']
+            ax.clear()
+            
+            fault_counts = self.trend_data[machine]['fault_counts']
+            labels = [self.fault_types[machine][i] for i in range(5)]
+            values = [fault_counts[i] for i in range(5)]
+            
+            bars = ax.bar(range(len(labels)), values, 
+                         color=['#00FF00' if i == 0 else '#FF0000' for i in range(5)])
+            
+            # Set ticks and labels properly
+            ax.set_xticks(range(len(labels)))
+            ax.set_xticklabels(labels, rotation=45, ha='right')
+            ax.set_ylabel('Count', color='white')
+            
+            # Add value labels
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{int(height)}',
+                       ha='center', va='bottom', color='white')
+            
+            self.histograms[machine]['fig'].tight_layout()
+            self.histograms[machine]['canvas'].draw()
         
-        for fault_type, count in self.trend_data[machine]["fault_counts"].items():
-            percentage = (count / total_samples) * 100 if total_samples > 0 else 0
-            fault_name = self.fault_types[machine][fault_type]
-            stats_text += f"{fault_name}: {percentage:.1f}%\n"
-        
-        self.machine_frames[machine]["stats_label"].configure(text=stats_text)
+        # Update fault trend
+        if hasattr(self, 'fault_trends') and machine in self.fault_trends:
+            ax = self.fault_trends[machine]['ax']
+            ax.clear()
+            
+            timestamps = list(self.trend_data[machine]['timestamps'])
+            faults = list(self.trend_data[machine]['faults'])
+            
+            if timestamps and faults:
+                ax.plot(timestamps, faults, '-', color='#FF5555', linewidth=2)
+                ax.set_ylim(-0.5, 4.5)
+                ax.set_yticks(range(5))
+                ax.set_yticklabels([self.fault_types[machine][i] for i in range(5)])
+                
+                ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
+                plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+            
+            self.fault_trends[machine]['fig'].tight_layout()
+            self.fault_trends[machine]['canvas'].draw()
 
     def get_fault_statistics(self, machine):
         """Get fault statistics for a machine"""
@@ -213,4 +226,111 @@ class TrendAnalyzer:
                 "percentage": percentage
             }
         
-        return statistics 
+        return statistics
+
+    def create_statistics_histogram(self, parent_frame):
+        """Create histogram visualization for fault statistics"""
+        fig = Figure(figsize=(8, 4), facecolor='#2B2B2B')
+        ax = fig.add_subplot(111)
+        ax.set_facecolor('#2B2B2B')
+        
+        # Customize axes
+        ax.tick_params(colors='white')
+        ax.xaxis.label.set_color('white')
+        ax.yaxis.label.set_color('white')
+        ax.title.set_color('#00FF00')
+        
+        # Create canvas
+        canvas = FigureCanvasTkAgg(fig, master=parent_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # Store references
+        self.histogram = {
+            'fig': fig,
+            'ax': ax,
+            'canvas': canvas
+        }
+    
+    def update_statistics_histogram(self, machine):
+        """Update the histogram with current data"""
+        if not hasattr(self, 'histogram'):
+            return
+        
+        ax = self.histogram['ax']
+        ax.clear()
+        
+        # Get fault counts
+        fault_counts = self.trend_data[machine]['fault_counts']
+        faults = [self.fault_types[machine][k] for k in sorted(fault_counts.keys())]
+        counts = [fault_counts[k] for k in sorted(fault_counts.keys())]
+        
+        # Create bars
+        bars = ax.bar(faults, counts, color=['#00FF00' if k==0 else '#FF0000' for k in sorted(fault_counts.keys())])
+        
+        # Add value labels
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height}',
+                    ha='center', va='bottom',
+                    color='white', fontsize=10)
+        
+        # Formatting
+        ax.set_title(f'{machine} Fault Distribution', fontsize=14)
+        ax.set_xlabel('Fault Type', fontsize=12)
+        ax.set_ylabel('Occurrences', fontsize=12)
+        plt.setp(ax.get_xticklabels(), rotation=45, ha='right', fontsize=10)
+        self.histogram['fig'].tight_layout()
+        self.histogram['canvas'].draw()
+
+    def create_fault_histogram(self, parent_frame, machine):
+        """Create histogram for fault distribution"""
+        fig = Figure(figsize=(6, 4), facecolor='#1A1A1A')
+        ax = fig.add_subplot(111)
+        ax.set_facecolor('#1A1A1A')
+        
+        # Customize appearance
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('white')
+        
+        # Create canvas
+        canvas = FigureCanvasTkAgg(fig, master=parent_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Store references
+        if not hasattr(self, 'histograms'):
+            self.histograms = {}
+        self.histograms[machine] = {
+            'fig': fig,
+            'ax': ax,
+            'canvas': canvas
+        }
+
+    def create_fault_trend(self, parent_frame, machine):
+        """Create trend graph for fault status"""
+        fig = Figure(figsize=(6, 4), facecolor='#1A1A1A')
+        ax = fig.add_subplot(111)
+        ax.set_facecolor('#1A1A1A')
+        
+        # Customize appearance
+        ax.tick_params(colors='white')
+        for spine in ax.spines.values():
+            spine.set_color('white')
+        ax.grid(True, linestyle='--', alpha=0.3)
+        
+        # Create canvas
+        canvas = FigureCanvasTkAgg(fig, master=parent_frame)
+        canvas.draw()
+        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        
+        # Store references
+        if not hasattr(self, 'fault_trends'):
+            self.fault_trends = {}
+        self.fault_trends[machine] = {
+            'fig': fig,
+            'ax': ax,
+            'canvas': canvas
+        } 

@@ -118,6 +118,7 @@ class FaultDetectionApp:
         # Add navigation buttons
         self.create_nav_button("Dashboard", self.show_dashboard)
         self.create_nav_button("Settings", self.show_settings)
+        self.create_nav_button("Statistics", self.show_statistics)
         
         # Create main content area with scrollbar
         self.content_container = ctk.CTkFrame(self.main_container)
@@ -182,7 +183,7 @@ class FaultDetectionApp:
                                     font=("Roboto", 14))
             fault_type.pack(pady=5)
             
-            # Parameters display
+            # Parameters display (remove scrollable)
             params_frame = ctk.CTkFrame(machine_container, fg_color="#1B1B1B")
             params_frame.pack(fill="both", expand=True, padx=5, pady=5)
             
@@ -191,7 +192,7 @@ class FaultDetectionApp:
                                       text_color="#00FF00")
             params_title.pack(pady=5)
             
-            # Live values display
+            # Changed from CTkScrollableFrame to regular CTkFrame
             values_frame = ctk.CTkFrame(params_frame, fg_color="#2B2B2B")
             values_frame.pack(fill="both", expand=True, padx=5, pady=5)
             
@@ -402,6 +403,83 @@ class FaultDetectionApp:
         # Show settings
         self.views['settings'].pack(fill="both", expand=True)
 
+    def show_statistics(self):
+        # Hide all views
+        for view in self.views.values():
+            view.pack_forget()
+        # Show statistics
+        if 'statistics' not in self.views:
+            self.views['statistics'] = self.create_statistics()
+        self.views['statistics'].pack(fill="both", expand=True)
+
+    def create_statistics(self):
+        # Create statistics frame
+        stats_frame = ctk.CTkFrame(self.scrollable_frame)
+        
+        # Title
+        title_frame = ctk.CTkFrame(stats_frame, fg_color="#1E1E1E")
+        title_frame.pack(fill="x", padx=20, pady=(20,30))
+        
+        title = ctk.CTkLabel(title_frame, text="📊 System Statistics",
+                           font=("Orbitron", 28, "bold"),
+                           text_color="#00FF00")
+        title.pack(pady=20)
+        
+        # Create container for all machines
+        for machine in ["Air Handling Unit", "Chiller", "Generator"]:
+            machine_frame = ctk.CTkFrame(stats_frame, fg_color="#2B2B2B")
+            machine_frame.pack(fill="x", padx=30, pady=15)
+            
+            # Machine header with icon
+            header_frame = ctk.CTkFrame(machine_frame, fg_color="#1E1E1E")
+            header_frame.pack(fill="x", padx=2, pady=2)
+            
+            icons = {
+                "Air Handling Unit": "🌀",
+                "Chiller": "❄️",
+                "Generator": "⚡"
+            }
+            
+            machine_title = ctk.CTkLabel(header_frame,
+                                       text=f"{icons[machine]} {machine}",
+                                       font=("Orbitron", 22, "bold"),
+                                       text_color="#00FF00")
+            machine_title.pack(pady=15)
+            
+            # Create grid for statistics displays
+            stats_grid = ctk.CTkFrame(machine_frame, fg_color="#232323")
+            stats_grid.pack(fill="x", padx=15, pady=15)
+            stats_grid.grid_columnconfigure(0, weight=1)
+            stats_grid.grid_columnconfigure(1, weight=1)
+            
+            # Left side: Fault Distribution Histogram
+            hist_frame = ctk.CTkFrame(stats_grid, fg_color="#1A1A1A")
+            hist_frame.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
+            
+            hist_title = ctk.CTkLabel(hist_frame,
+                                    text="Fault Distribution",
+                                    font=("Exo 2", 16, "bold"),
+                                    text_color="#00FFFF")
+            hist_title.pack(pady=5)
+            
+            # Create histogram
+            self.trend_analyzer.create_fault_histogram(hist_frame, machine)
+            
+            # Right side: Fault Status Trend
+            trend_frame = ctk.CTkFrame(stats_grid, fg_color="#1A1A1A")
+            trend_frame.grid(row=0, column=1, padx=10, pady=10, sticky="nsew")
+            
+            trend_title = ctk.CTkLabel(trend_frame,
+                                     text="Fault Status Trend",
+                                     font=("Exo 2", 16, "bold"),
+                                     text_color="#00FFFF")
+            trend_title.pack(pady=5)
+            
+            # Create fault status trend
+            self.trend_analyzer.create_fault_trend(trend_frame, machine)
+        
+        return stats_frame
+
     def update_setpoint(self, machine, param, value, label):
         """Update setpoint value and display"""
         self.setpoints[machine][param] = float(value)
@@ -425,95 +503,124 @@ class FaultDetectionApp:
                 text_color="#FF0000"
             )
         
-        # Create a styled parameter display
-        params_frame = ctk.CTkFrame(frame["params"].master, fg_color="#1A1A1A")
-        params_frame.pack(fill="both", expand=True, padx=10, pady=5)
+        # Get or create the main parameters container
+        if not hasattr(frame["params"], 'param_widgets'):
+            # Initialize parameter display structure
+            frame["params"].param_widgets = {}
+            
+            # Create main container
+            params_container = ctk.CTkFrame(frame["params"].master, fg_color="#1A1A1A")
+            params_container.pack(fill="both", expand=True, padx=10, pady=5)
+            frame["params"].param_widgets['container'] = params_container
+            
+            # Create header
+            header_frame = ctk.CTkFrame(params_container, fg_color="#232323")
+            header_frame.pack(fill="x", padx=5, pady=5)
+            
+            ctk.CTkLabel(header_frame, text="Parameter",
+                        font=("Orbitron", 12, "bold"),
+                        text_color="#00FF00").pack(side="left", padx=10)
+            ctk.CTkLabel(header_frame, text="Current",
+                        font=("DSEG14 Classic", 12, "bold"),
+                        text_color="#00FFFF").pack(side="left", padx=10, expand=True)
+            ctk.CTkLabel(header_frame, text="Setpoint",
+                        font=("Share Tech Mono", 12, "bold"),
+                        text_color="#FFA500").pack(side="right", padx=10)
+            
+            # Create scrollable area for parameters
+            scroll_frame = ctk.CTkScrollableFrame(params_container)
+            scroll_frame.pack(fill="both", expand=True)
+            frame["params"].param_widgets['scroll_frame'] = scroll_frame
         
-        # Clear previous widgets
-        for widget in params_frame.winfo_children():
-                widget.destroy()
+        # Get references to existing widgets
+        container = frame["params"].param_widgets['container']
+        scroll_frame = frame["params"].param_widgets['scroll_frame']
         
-        # Header
-        header_frame = ctk.CTkFrame(params_frame, fg_color="#232323")
-        header_frame.pack(fill="x", padx=5, pady=5)
-        
-        # Create headers
-        ctk.CTkLabel(header_frame, text="Parameter",
-                    font=("Orbitron", 12, "bold"),
-                    text_color="#00FF00").pack(side="left", padx=10)
-        ctk.CTkLabel(header_frame, text="Current",
-                    font=("DSEG14 Classic", 12, "bold"),
-                    text_color="#00FFFF").pack(side="left", padx=10, expand=True)
-        ctk.CTkLabel(header_frame, text="Setpoint",
-                    font=("Share Tech Mono", 12, "bold"),
-                    text_color="#FFA500").pack(side="right", padx=10)
-        
-        # Parameter values with improved styling
-        for k, v in data.items():
-            if k in self.setpoints.get(machine, {}):
-                # Create parameter container
-                param_container = ctk.CTkFrame(params_frame, fg_color="#2B2B2B")
+        # Create or update parameter rows
+        for idx, (k, v) in enumerate(data.items()):
+            if k not in frame["params"].param_widgets:
+                # Create new parameter row if it doesn't exist
+                param_container = ctk.CTkFrame(scroll_frame, fg_color="#2B2B2B")
                 param_container.pack(fill="x", padx=5, pady=2)
                 
                 # Parameter name
-                param_name = ctk.CTkLabel(param_container,
+                name_label = ctk.CTkLabel(param_container,
                                         text=k.replace('_', ' ').title(),
                                         font=("Exo 2", 11),
                                         text_color="#FFFFFF")
-                param_name.pack(side="left", padx=10)
+                name_label.pack(side="left", padx=10)
                 
-                # Current value with digital display style
+                # Current value
+                current_label = ctk.CTkLabel(param_container,
+                                           font=("DSEG14 Classic", 14))
+                current_label.pack(side="left", padx=10, expand=True)
+                
+                # Trend indicator
+                trend_label = ctk.CTkLabel(param_container,
+                                         font=("Arial", 14, "bold"))
+                trend_label.pack(side="right", padx=2)
+                
+                # Setpoint value
+                setpoint_label = ctk.CTkLabel(param_container,
+                                            font=("Share Tech Mono", 12))
+                setpoint_label.pack(side="right", padx=10)
+                
+                # Store references
+                frame["params"].param_widgets[k] = {
+                    'container': param_container,
+                    'name': name_label,
+                    'current': current_label,
+                    'trend': trend_label,
+                    'setpoint': setpoint_label
+                }
+            
+            # Update values
+            widget_set = frame["params"].param_widgets[k]
+            
+            if k in self.setpoints.get(machine, {}):
                 current = float(v)
                 setpoint = self.setpoints[machine][k]
                 deviation = abs(current - setpoint)
                 
-                # Color coding based on deviation
-                if deviation < (setpoint * 0.05):  # Within 5%
-                    value_color = "#00FF00"  # Green
-                elif deviation < (setpoint * 0.1):  # Within 10%
-                    value_color = "#FFA500"  # Orange
+                # Update current value color
+                if deviation < (setpoint * 0.05):
+                    value_color = "#00FF00"
+                elif deviation < (setpoint * 0.1):
+                    value_color = "#FFA500"
                 else:
-                    value_color = "#FF0000"  # Red
+                    value_color = "#FF0000"
                 
-                current_value = ctk.CTkLabel(param_container,
-                                           text=f"{current:.2f}",
-                                           font=("DSEG14 Classic", 14),
-                                           text_color=value_color)
-                current_value.pack(side="left", padx=10, expand=True)
+                widget_set['current'].configure(
+                    text=f"{current:.2f}",
+                    text_color=value_color
+                )
                 
-                # Setpoint value
-                setpoint_value = ctk.CTkLabel(param_container,
-                                            text=f"{setpoint:.2f}",
-                                            font=("Share Tech Mono", 12),
-                                            text_color="#FFA500")
-                setpoint_value.pack(side="right", padx=10)
+                # Update setpoint display
+                widget_set['setpoint'].configure(
+                    text=f"{setpoint:.2f}",
+                    text_color="#FFA500"
+                )
                 
-                # Add trend indicator
+                # Update trend indicator
                 trend_indicator = "↑" if current > setpoint else "↓" if current < setpoint else "="
                 trend_color = "#FF0000" if trend_indicator != "=" else "#00FF00"
+                widget_set['trend'].configure(
+                    text=trend_indicator,
+                    text_color=trend_color
+                )
                 
-                trend_label = ctk.CTkLabel(param_container,
-                                         text=trend_indicator,
-                                         font=("Arial", 14, "bold"),
-                                         text_color=trend_color)
-                trend_label.pack(side="right", padx=2)
-                
+                # Show all elements
+                widget_set['container'].pack(fill="x", padx=5, pady=2)
+                widget_set['setpoint'].pack(side="right", padx=10)
+                widget_set['trend'].pack(side="right", padx=2)
             else:
-                # Display other parameters without setpoint comparison
-                param_container = ctk.CTkFrame(params_frame, fg_color="#2B2B2B")
-                param_container.pack(fill="x", padx=5, pady=2)
-                
-                param_name = ctk.CTkLabel(param_container,
-                                        text=k.replace('_', ' ').title(),
-                                        font=("Exo 2", 11),
-                                        text_color="#888888")
-                param_name.pack(side="left", padx=10)
-                
-                value = ctk.CTkLabel(param_container,
-                                   text=f"{float(v):.2f}",
-                                   font=("DSEG14 Classic", 14),
-                                   text_color="#888888")
-                value.pack(side="right", padx=10)
+                # For non-setpoint parameters
+                widget_set['current'].configure(
+                    text=f"{float(v):.2f}",
+                    text_color="#888888"
+                )
+                widget_set['setpoint'].pack_forget()
+                widget_set['trend'].pack_forget()
         
         # Update trends
         self.trend_analyzer.update_trends(machine, prediction, data=data)
