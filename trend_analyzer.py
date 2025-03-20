@@ -59,11 +59,44 @@ class TrendAnalyzer:
             }
         }
 
-        # Define key parameters to track for each machine
+        # Update tracked parameters to include all parameters
         self.tracked_parameters = {
-            "Air Handling Unit": ["supply_air_temp", "fan_speed", "filter_dp"],
-            "Chiller": ["chill_water_outlet", "condenser_pressure", "differential_pressure"],
-            "Generator": ["oil_pressure", "coolant_temp", "frequency"]
+            "Air Handling Unit": [
+                "supply_air_temp",
+                "return_air_temp",
+                "room_air_temp",
+                "return_air_humidity",
+                "fan_speed",
+                "cooling_state",
+                "electric_reheat_state",
+                "filter_dp",
+                "cool_water_valve",
+                "hot_water_valve",
+                "outside_air_damper"
+            ],
+            "Chiller": [
+                "chill_water_outlet",
+                "chill_water_inlet",
+                "condenser_pressure",
+                "differential_pressure",
+                "supply_water_temp",
+                "cooling_tower_fan",
+                "condenser_pump",
+                "return_condenser_valve",
+                "flow_switch"
+            ],
+            "Generator": [
+                "oil_pressure",
+                "coolant_temp",
+                "battery_voltage",
+                "phase1_voltage",
+                "phase2_voltage",
+                "phase3_voltage",
+                "frequency",
+                "load_percent",
+                "run_hours",
+                "fuel_level"
+            ]
         }
 
     def create_trend_graphs(self, machine_container, machine):
@@ -77,25 +110,29 @@ class TrendAnalyzer:
                                   text_color="#00FF00")
         trend_title.pack(pady=5)
         
-        # Create matplotlib figure with subplots (only for parameters)
-        fig = Figure(figsize=(6, 6), facecolor='#1B1B1B')
+        # Create matplotlib figure with subplots
+        num_params = len(self.tracked_parameters[machine])
+        fig = Figure(figsize=(6, 2*num_params), facecolor='#1B1B1B')  # Adjust figure height based on parameters
         
-        # Create subplots for parameters only (removed fault status)
-        gs = fig.add_gridspec(3, 1)  # Changed from 4 to 3 subplots
-        axes = [fig.add_subplot(gs[i]) for i in range(3)]
+        # Create subplots for all parameters
+        gs = fig.add_gridspec(num_params, 1)
+        axes = [fig.add_subplot(gs[i]) for i in range(num_params)]
         
         # Customize appearance for all subplots
         for ax in axes:
             ax.set_facecolor('#2B2B2B')
-            ax.tick_params(colors='white')
+            ax.tick_params(colors='white', labelsize=8)  # Reduced font size
             for spine in ax.spines.values():
                 spine.set_color('white')
             ax.grid(True, linestyle='--', alpha=0.3)
         
-        # Create canvas
-        canvas = FigureCanvasTkAgg(fig, master=trend_frame)
+        # Create canvas with scrollable container
+        canvas_frame = ctk.CTkScrollableFrame(trend_frame, fg_color="#1B1B1B")
+        canvas_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
+        canvas = FigureCanvasTkAgg(fig, master=canvas_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill="both", expand=True, padx=5, pady=5)
+        canvas.get_tk_widget().pack(fill="both", expand=True)
         
         # Initialize parameter history
         for param in self.tracked_parameters[machine]:
@@ -126,7 +163,13 @@ class TrendAnalyzer:
         if data:
             for param in self.tracked_parameters[machine]:
                 if param in data:
-                    self.trend_data[machine]["parameter_history"][param].append(float(data[param]))
+                    try:
+                        # Convert boolean or integer values to float
+                        value = float(data[param])
+                        self.trend_data[machine]["parameter_history"][param].append(value)
+                    except (ValueError, TypeError):
+                        # Skip parameters that can't be converted to float
+                        continue
         
         # Get canvas and axes
         canvas = self.machine_frames[machine]["trend_canvas"]
@@ -136,6 +179,7 @@ class TrendAnalyzer:
         for ax in axes:
             ax.clear()
         
+        # Get timestamps list
         timestamps = list(self.trend_data[machine]["timestamps"])
         
         if timestamps:
@@ -143,23 +187,35 @@ class TrendAnalyzer:
             for idx, param in enumerate(self.tracked_parameters[machine]):
                 if param in self.trend_data[machine]["parameter_history"]:
                     values = list(self.trend_data[machine]["parameter_history"][param])
-                    if values:
+                    if values and len(values) == len(timestamps):  # Ensure equal lengths
                         # Create smooth curve
                         axes[idx].plot(timestamps, values, '-', color='#00FF00', linewidth=2)
-                        axes[idx].set_title(param.replace('_', ' ').title(), color='white', pad=5)
+                        axes[idx].set_title(param.replace('_', ' ').title(), 
+                                          color='white', pad=5, fontsize=8)
                         axes[idx].grid(True, linestyle='--', alpha=0.3)
+                        
+                        # Add current value text
+                        if values:
+                            current_value = values[-1]
+                            axes[idx].text(0.02, 0.95, f'Current: {current_value:.2f}',
+                                         transform=axes[idx].transAxes,
+                                         color='#00FFFF',
+                                         fontsize=8)
         
         # Format x-axis
         for ax in axes:
-            ax.tick_params(colors='white')
+            ax.tick_params(colors='white', labelsize=8)
             ax.grid(True, linestyle='--', alpha=0.3)
             ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
-            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45)
+            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, fontsize=6)
         
-        # Adjust layout
-        fig = canvas.figure
-        fig.tight_layout()
-        canvas.draw()
+        try:
+            # Adjust layout with error handling
+            fig = canvas.figure
+            fig.tight_layout()
+            canvas.draw()
+        except Exception as e:
+            print(f"Layout adjustment warning (non-critical): {str(e)}")
         
         # Update statistics with prediction
         self.update_statistics(machine, prediction)
