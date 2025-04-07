@@ -59,43 +59,43 @@ class TrendAnalyzer:
             }
         }
 
-        # Update tracked parameters to include all parameters
+        # Update tracked_parameters for all devices
         self.tracked_parameters = {
             "Air Handling Unit": [
-                "supply_air_temp",
-                "return_air_temp",
-                "room_air_temp",
-                "return_air_humidity",
-                "fan_speed",
-                "cooling_state",
-                "electric_reheat_state",
-                "filter_dp",
-                "cool_water_valve",
-                "hot_water_valve",
-                "outside_air_damper"
+                ("supply_air_temp", "supply_air_setpoint"),
+                ("return_air_temp", "return_air_setpoint"),
+                ("room_air_temp", "room_air_setpoint"),
+                ("return_air_humidity", "return_air_humidity_setpoint"),
+                ("fan_speed", "fan_speed_setpoint"),
+                ("cooling_state", "cooling_state_setpoint"),
+                ("electric_reheat_state", "electric_reheat_state_setpoint"),
+                ("filter_dp", "filter_dp_setpoint"),
+                ("cool_water_valve", "cool_water_valve_setpoint"),
+                ("hot_water_valve", "hot_water_valve_setpoint"),
+                ("outside_air_damper", "outside_air_damper_setpoint")
             ],
             "Chiller": [
-                "chill_water_outlet",
-                "chill_water_inlet",
-                "condenser_pressure",
-                "differential_pressure",
-                "supply_water_temp",
-                "cooling_tower_fan",
-                "condenser_pump",
-                "return_condenser_valve",
-                "flow_switch"
+                ("chill_water_outlet", "chill_water_outlet_setpoint"),
+                ("chill_water_inlet", "chill_water_inlet_setpoint"),
+                ("condenser_pressure", "condenser_pressure_setpoint"),
+                ("differential_pressure", "differential_pressure_setpoint"),
+                ("supply_water_temp", "supply_water_temp_setpoint"),
+                ("cooling_tower_fan", "cooling_tower_fan_setpoint"),
+                ("condenser_pump", "condenser_pump_setpoint"),
+                ("return_condenser_valve", "return_condenser_valve_setpoint"),
+                ("flow_switch", "flow_switch_setpoint")
             ],
             "Generator": [
-                "oil_pressure",
-                "coolant_temp",
-                "battery_voltage",
-                "phase1_voltage",
-                "phase2_voltage",
-                "phase3_voltage",
-                "frequency",
-                "load_percent",
-                "run_hours",
-                "fuel_level"
+                ("oil_pressure", "oil_pressure_setpoint"),
+                ("coolant_temp", "coolant_temp_setpoint"),
+                ("battery_voltage", "battery_voltage_setpoint"),
+                ("phase1_voltage", "phase1_voltage_setpoint"),
+                ("phase2_voltage", "phase2_voltage_setpoint"),
+                ("phase3_voltage", "phase3_voltage_setpoint"),
+                ("frequency", "frequency_setpoint"),
+                ("load_percent", "load_percent_setpoint"),
+                ("run_hours", "run_hours_setpoint"),
+                ("fuel_level", "fuel_level_setpoint")
             ]
         }
 
@@ -135,7 +135,7 @@ class TrendAnalyzer:
         canvas.get_tk_widget().pack(fill="both", expand=True)
         
         # Initialize parameter history
-        for param in self.tracked_parameters[machine]:
+        for param, setpoint_param in self.tracked_parameters[machine]:
             self.trend_data[machine]["parameter_history"][param] = deque(maxlen=100)
         
         # Store references
@@ -161,15 +161,13 @@ class TrendAnalyzer:
         
         # Update parameter history if data is provided
         if data:
-            for param in self.tracked_parameters[machine]:
-                if param in data:
-                    try:
-                        # Convert boolean or integer values to float
-                        value = float(data[param])
-                        self.trend_data[machine]["parameter_history"][param].append(value)
-                    except (ValueError, TypeError):
-                        # Skip parameters that can't be converted to float
-                        continue
+            for param, setpoint_param in self.tracked_parameters[machine]:
+                # Ensure both parameter and setpoint exist in data
+                if param in data and setpoint_param in data:
+                    # Store both value and setpoint
+                    self.trend_data[machine]["parameter_history"].setdefault(param, deque(maxlen=100)).append(
+                        (data[param], data[setpoint_param])
+                    )
         
         # Get canvas and axes
         canvas = self.machine_frames[machine]["trend_canvas"]
@@ -182,40 +180,47 @@ class TrendAnalyzer:
         # Get timestamps list
         timestamps = list(self.trend_data[machine]["timestamps"])
         
-        if timestamps:
-            # Plot parameter trends
-            for idx, param in enumerate(self.tracked_parameters[machine]):
-                if param in self.trend_data[machine]["parameter_history"]:
-                    values = list(self.trend_data[machine]["parameter_history"][param])
-                    if values and len(values) == len(timestamps):  # Ensure equal lengths
-                        # Create smooth curve
-                        axes[idx].plot(timestamps, values, '-', color='#00FF00', linewidth=2)
-                        axes[idx].set_title(param.replace('_', ' ').title(), 
-                                          color='white', pad=5, fontsize=8)
-                        axes[idx].grid(True, linestyle='--', alpha=0.3)
-                        
-                        # Add current value text
-                        if values:
-                            current_value = values[-1]
-                            axes[idx].text(0.02, 0.95, f'Current: {current_value:.2f}',
-                                         transform=axes[idx].transAxes,
-                                         color='#00FFFF',
-                                         fontsize=8)
+        # Plot parameter trends
+        for idx, (param, setpoint_param) in enumerate(self.tracked_parameters[machine]):
+            history = self.trend_data[machine]["parameter_history"].get(param, [])
+            if len(history) >= 2:  # Need at least 2 points to plot
+                values = [h[0] for h in history]
+                setpoints = [h[1] for h in history]
+                
+                # Plot actual values
+                axes[idx].plot(timestamps[-len(values):], values, '-', color='#00FF00', linewidth=2, label='Actual')
+                
+                # Plot setpoints
+                axes[idx].plot(timestamps[-len(setpoints):], setpoints, '--', color='#FFA500', linewidth=1.5, label='Setpoint')
+                
+                # Configure plot
+                axes[idx].set_title(param.replace('_', ' ').title(), color='white', pad=5, fontsize=8)
+                axes[idx].grid(True, linestyle='--', alpha=0.3)
+                axes[idx].legend(fontsize=6, facecolor='#2B2B2B', edgecolor='white')
+                
+                # Add current value annotation
+                if values:
+                    axes[idx].annotate(f'{values[-1]:.2f}', 
+                                     (timestamps[-1], values[-1]),
+                                     textcoords="offset points",
+                                     xytext=(0,5),
+                                     ha='center',
+                                     color='#00FFFF',
+                                     fontsize=6)
         
-        # Format x-axis
+        # Format axes
         for ax in axes:
-            ax.tick_params(colors='white', labelsize=8)
-            ax.grid(True, linestyle='--', alpha=0.3)
+            ax.tick_params(colors='white', labelsize=6)
             ax.xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
-            plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, fontsize=6)
+            ax.set_facecolor('#2B2B2B')
+            for spine in ax.spines.values():
+                spine.set_color('white')
         
         try:
-            # Adjust layout with error handling
-            fig = canvas.figure
-            fig.tight_layout()
+            canvas.figure.tight_layout()
             canvas.draw()
         except Exception as e:
-            print(f"Layout adjustment warning (non-critical): {str(e)}")
+            print(f"Graph update warning: {str(e)}")
         
         # Update statistics with prediction
         self.update_statistics(machine, prediction)

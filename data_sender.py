@@ -20,16 +20,27 @@ def generate_random_fault_data(device_type):
         if device_type == "AHU":
             data = {
                 'supply_air_temp': np.random.normal(18, 1),
+                'supply_air_setpoint': 18.0,
                 'return_air_temp': np.random.normal(23, 1),
+                'return_air_setpoint': 24.0,
                 'room_air_temp': np.random.normal(23, 1.5),
+                'room_air_setpoint': 23.0,
                 'return_air_humidity': np.random.uniform(40, 60),
+                'return_air_humidity_setpoint': 50.0,
                 'fan_speed': np.random.randint(40, 100),
+                'fan_speed_setpoint': 75.0,
                 'cooling_state': np.random.choice([0, 1]),
+                'cooling_state_setpoint': 0.5,
                 'electric_reheat_state': np.random.choice([0, 1]),
+                'electric_reheat_state_setpoint': 0.5,
                 'filter_dp': np.random.uniform(50, 250),
+                'filter_dp_setpoint': 150.0,
                 'cool_water_valve': np.random.uniform(0, 100),
+                'cool_water_valve_setpoint': 50.0,
                 'hot_water_valve': np.random.uniform(0, 100),
-                'outside_air_damper': np.random.uniform(20, 80)
+                'hot_water_valve_setpoint': 50.0,
+                'outside_air_damper': np.random.uniform(20, 80),
+                'outside_air_damper_setpoint': 50.0
             }
             
             # AHU Fault Injection (20% chance)
@@ -50,14 +61,23 @@ def generate_random_fault_data(device_type):
         elif device_type == "CHILLER":
             data = {
                 'chill_water_outlet': float(np.random.normal(6, 0.5)),
+                'chill_water_outlet_setpoint': 6.0,
                 'chill_water_inlet': float(np.random.normal(10, 1)),
+                'chill_water_inlet_setpoint': 10.0,
                 'condenser_pressure': float(np.random.normal(4.5, 0.3)),
+                'condenser_pressure_setpoint': 4.5,
                 'differential_pressure': float(np.random.normal(15, 2)),
+                'differential_pressure_setpoint': 15.0,
                 'supply_water_temp': float(np.random.normal(45, 1.5)),
+                'supply_water_temp_setpoint': 45.0,
                 'cooling_tower_fan': int(np.random.choice([0, 1])),
+                'cooling_tower_fan_setpoint': 0.5,
                 'condenser_pump': int(np.random.choice([0, 1])),
+                'condenser_pump_setpoint': 0.5,
                 'return_condenser_valve': int(np.random.choice([0, 1])),
-                'flow_switch': int(np.random.choice([0, 1]))
+                'return_condenser_valve_setpoint': 0.5,
+                'flow_switch': int(np.random.choice([0, 1])),
+                'flow_switch_setpoint': 0.5
             }
             
             # Chiller Fault Injection (20% chance)
@@ -79,15 +99,25 @@ def generate_random_fault_data(device_type):
         elif device_type == "GENERATOR":
             data = {
                 'oil_pressure': float(np.random.normal(2.0, 0.2)),
+                'oil_pressure_setpoint': 2.0,
                 'coolant_temp': float(np.random.normal(85, 5)),
+                'coolant_temp_setpoint': 85.0,
                 'battery_voltage': float(np.random.normal(24, 0.3)),
+                'battery_voltage_setpoint': 24.0,
                 'phase1_voltage': float(np.random.normal(230, 3)),
+                'phase1_voltage_setpoint': 230.0,
                 'phase2_voltage': float(np.random.normal(230, 3)),
+                'phase2_voltage_setpoint': 230.0,
                 'phase3_voltage': float(np.random.normal(230, 3)),
+                'phase3_voltage_setpoint': 230.0,
                 'frequency': float(np.random.normal(50, 0.1)),
+                'frequency_setpoint': 50.0,
                 'load_percent': float(np.random.uniform(40, 80)),
+                'load_percent_setpoint': 60.0,
                 'run_hours': int(np.random.randint(0, 20000)),
-                'fuel_level': float(np.random.uniform(30, 100))
+                'run_hours_setpoint': 10000.0,
+                'fuel_level': float(np.random.uniform(30, 100)),
+                'fuel_level_setpoint': 65.0
             }
             
             # Generator Fault Injection (20% chance)

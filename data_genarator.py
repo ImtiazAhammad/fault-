@@ -57,7 +57,6 @@ def generate_device_data(device_type, num_samples=10000):
 
     elif device_type == "Chiller":
         data = {
-            # Chiller Parameters from Client List
             'chill_water_outlet': np.random.normal(6, 0.5, num_samples),
             'chill_water_inlet': np.random.normal(10, 1, num_samples),
             'condenser_pressure': np.random.normal(4.5, 0.3, num_samples),
@@ -67,6 +66,15 @@ def generate_device_data(device_type, num_samples=10000):
             'condenser_pump': np.random.choice([0, 1], num_samples, p=[0.2, 0.8]),
             'return_condenser_valve': np.random.choice([0, 1], num_samples, p=[0.1, 0.9]),
             'flow_switch': np.random.choice([0, 1], num_samples, p=[0.95, 0.05]),
+            'chill_water_outlet_setpoint': np.full(num_samples, 6.0),
+            'chill_water_inlet_setpoint': np.full(num_samples, 10.0),
+            'condenser_pressure_setpoint': np.full(num_samples, 4.5),
+            'differential_pressure_setpoint': np.full(num_samples, 15.0),
+            'supply_water_temp_setpoint': np.full(num_samples, 45.0),
+            'cooling_tower_fan_setpoint': np.zeros(num_samples),
+            'condenser_pump_setpoint': np.zeros(num_samples),
+            'return_condenser_valve_setpoint': np.zeros(num_samples),
+            'flow_switch_setpoint': np.zeros(num_samples),
             'fault_type': np.zeros(num_samples, dtype=int)
         }
         
@@ -103,7 +111,6 @@ def generate_device_data(device_type, num_samples=10000):
 
     elif device_type == "Generator":
         data = {
-            # Generator Parameters from Client List
             'oil_pressure': np.random.normal(2.0, 0.2, num_samples),
             'coolant_temp': np.random.normal(85, 5, num_samples),
             'battery_voltage': np.random.normal(24, 0.3, num_samples),
@@ -114,6 +121,16 @@ def generate_device_data(device_type, num_samples=10000):
             'load_percent': np.random.uniform(40, 80, num_samples),
             'run_hours': np.random.randint(0, 20000, num_samples),
             'fuel_level': np.random.uniform(30, 100, num_samples),
+            'oil_pressure_setpoint': np.full(num_samples, 2.0),
+            'coolant_temp_setpoint': np.full(num_samples, 85.0),
+            'battery_voltage_setpoint': np.full(num_samples, 24.0),
+            'phase1_voltage_setpoint': np.full(num_samples, 230.0),
+            'phase2_voltage_setpoint': np.full(num_samples, 230.0),
+            'phase3_voltage_setpoint': np.full(num_samples, 230.0),
+            'frequency_setpoint': np.full(num_samples, 50.0),
+            'load_percent_setpoint': np.full(num_samples, 60.0),
+            'run_hours_setpoint': np.full(num_samples, 10000),
+            'fuel_level_setpoint': np.full(num_samples, 65.0),
             'fault_type': np.zeros(num_samples, dtype=int)
         }
         
